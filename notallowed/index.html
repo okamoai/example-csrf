@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>CSRF Test (not allowed)</title>
+  </head>
+  <body>
+    <h1>CSRF Test (not allowed)</h1>
+    Target:
+    <select id="target">
+      <option value="/danger">Danger</option>
+      <option value="/safety">Safety</option>
+    </select>
+    <br />
+    Method:
+    <select id="type">
+      <option>GET</option>
+      <option>POST</option>
+    </select>
+    <label><input type="checkbox" value="1" id="ajax" /> Ajax</label>
+
+    <form action="" method="GET">
+      Text: <input type="text" name="text" id="text" />
+      <input type="submit" value="Send" />
+    </form>
+    <div id="iframe"></div>
+    <script>
+      document.forms[0].addEventListener("submit", function(e) {
+        var target = document.getElementById("target").value;
+        var type = document.getElementById("type").value;
+        var isAjax = document.getElementById("ajax").checked;
+        if (document.querySelector("iframe")) {
+          document.body.removeChild(document.querySelector("iframe"));
+        }
+        if (isAjax) {
+          var xhr = new XMLHttpRequest();
+          xhr.open(type, "http://localhost:3010" + target);
+          xhr.setRequestHeader(
+            "Content-Type",
+            "application/x-www-form-urlencoded"
+          );
+          if (target === "/safety") {
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+          }
+          xhr.withCredentials = true;
+          xhr.send(
+            "text=" + encodeURIComponent(document.getElementById("text").value)
+          );
+        } else {
+          const iframeElement = document.createElement("iframe");
+          document.body.appendChild(iframeElement);
+          const iframeWindow = iframeElement.contentWindow;
+          const iframeDocument =
+            iframeElement.contentDocument || iframeWindow.document;
+          iframeDocument.open();
+          iframeDocument.write("<html><head></head><body></body></html>");
+          iframeDocument.close();
+          const bodyElement = iframeDocument.body;
+          const formElement = document.forms[0].cloneNode(true);
+          bodyElement.appendChild(formElement);
+          formElement.method = type;
+          formElement.action = "http://localhost:3010" + target;
+          formElement.submit();
+        }
+        e.preventDefault();
+      });
+    </script>
+  </body>
+</html>
